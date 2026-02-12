@@ -1,0 +1,11 @@
+name: CelestialWhitelister
+version: '${version}'
+main: dev.celestelove.whitelister.CelestialWhitelister
+api-version: '1.21'
+authors: [ CelesteLove ]
+
+dependencies:
+  server:
+    LuckPerms:
+      load: BEFORE
+      required: true

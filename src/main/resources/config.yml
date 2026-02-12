@@ -1,0 +1,14 @@
+# Discord bot token
+discord-token: "YOUR_BOT_TOKEN_HERE"
+
+# Mapping of Discord role IDs to LuckPerms group names.
+# Players will be added to the LuckPerms group corresponding to
+# the highest role they have from this list.
+# Format: "discord_role_id": "luckperms_group_name"
+role-groups:
+  "123456789012345678": "vip"
+  "987654321098765432": "member"
+
+# The default LuckPerms group to assign if the user has none of the mapped roles.
+# Leave empty to not assign any group if no roles match.
+default-group: "default"
