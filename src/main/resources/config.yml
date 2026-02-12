@@ -12,3 +12,20 @@ role-groups:
 # The default LuckPerms group to assign if the user has none of the mapped roles.
 # Leave empty to not assign any group if no roles match.
 default-group: "default"
+
+# Channel restriction — when enabled, the /whitelist command will only work
+# in the listed Discord channel IDs.
+channel-restriction:
+  enabled: false
+  channels:
+    - "111111111111111111"
+    - "222222222222222222"
+
+# Role requirement — when enabled, users must have at least one of the listed
+# Discord role IDs to use /whitelist. This is checked independently from the
+# role-groups mapping above.
+required-roles:
+  enabled: false
+  roles:
+    - "333333333333333333"
+    - "444444444444444444"

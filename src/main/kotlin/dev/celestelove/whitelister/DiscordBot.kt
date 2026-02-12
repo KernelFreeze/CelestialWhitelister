@@ -15,7 +15,9 @@ class DiscordBot(
     private val plugin: JavaPlugin,
     private val token: String,
     private val roleGroups: Map<String, String>,
-    private val defaultGroup: String
+    private val defaultGroup: String,
+    private val allowedChannels: Set<String>,
+    private val requiredRoles: Set<String>
 ) {
     private var kord: Kord? = null
 
@@ -46,6 +48,17 @@ class DiscordBot(
 
         val nickname = interaction.command.strings["nickname"]!!
 
+        // Channel restriction check
+        if (allowedChannels.isNotEmpty()) {
+            val channelId = interaction.channelId.toString()
+            if (channelId !in allowedChannels) {
+                interaction.respondEphemeral {
+                    content = "The /whitelist command cannot be used in this channel."
+                }
+                return
+            }
+        }
+
         val member = interaction.data.member.value
         if (member == null) {
             interaction.respondEphemeral { content = "This command can only be used in a server." }
@@ -53,6 +66,16 @@ class DiscordBot(
         }
 
         val memberRoleIds = member.roles.map { it.toString() }
+
+        // Required roles check
+        if (requiredRoles.isNotEmpty()) {
+            if (memberRoleIds.none { it in requiredRoles }) {
+                interaction.respondEphemeral {
+                    content = "You don't have the required role to use this command."
+                }
+                return
+            }
+        }
 
         // Find the matching LuckPerms group from the member's Discord roles
         val matchedGroup = memberRoleIds.firstNotNullOfOrNull { roleId ->

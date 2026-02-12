@@ -3,6 +3,7 @@ version: '${version}'
 main: dev.celestelove.whitelister.CelestialWhitelister
 api-version: '1.21'
 authors: [ CelesteLove ]
+loader: dev.celestelove.whitelister.CelestialWhitelisterClassLoader
 
 dependencies:
   server:
