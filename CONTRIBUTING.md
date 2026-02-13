@@ -1,4 +1,4 @@
-# Contributing to CelestialWhitelister
+# Contributing to Celestial Whitelister
 
 ## Tech Stack
 

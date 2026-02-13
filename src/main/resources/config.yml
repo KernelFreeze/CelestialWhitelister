@@ -13,13 +13,13 @@ role-groups:
 # Leave empty to not assign any group if no roles match.
 default-group: "default"
 
-# UUID resolution — only applies to offline-mode servers.
+# UUID resolution, only applies to offline-mode servers.
 # When enabled, the plugin will try to resolve the player's online (Mojang) UUID first,
 # falling back to an offline UUID if the player doesn't have a Mojang account.
 # On online-mode servers, online UUIDs are always used regardless of this setting.
 force-online-uuids: false
 
-# Channel restriction — when enabled, the /whitelist command will only work
+# Channel restriction, when enabled, the /whitelist command will only work
 # in the listed Discord channel IDs.
 channel-restriction:
   enabled: false
@@ -27,8 +27,8 @@ channel-restriction:
     - "111111111111111111"
     - "222222222222222222"
 
-# Role requirement — when enabled, users must have at least one of the listed
-# Discord role IDs to use /whitelist. This is checked independently from the
+# Role requirement, when enabled, users must have at least one of the listed
+# Discord role IDs to use /whitelist. This is checked independently of the
 # role-groups mapping above.
 required-roles:
   enabled: false

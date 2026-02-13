@@ -1,5 +1,6 @@
 package dev.celestelove.whitelister
 
+import com.charleskorn.kaml.Yaml
 import com.github.shynixn.mccoroutine.bukkit.SuspendingJavaPlugin
 import com.github.shynixn.mccoroutine.bukkit.launch
 import com.mojang.brigadier.Command
@@ -50,7 +51,7 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
                             }
                     )
                     .build(),
-                "CelestialWhitelister admin commands",
+                "Celestial Whitelister admin commands",
                 listOf("cw")
             )
         }
@@ -72,40 +73,42 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
         }
     }
 
+    private fun loadConfig(): PluginConfig {
+        val configText = dataFolder.resolve("config.yml").readText()
+        return Yaml.default.decodeFromString(PluginConfig.serializer(), configText)
+    }
+
     private fun startBot(): Boolean {
-        val token = config.getString("discord-token")
-        if (token.isNullOrBlank() || token == "YOUR_BOT_TOKEN_HERE") {
+        val pluginConfig = try {
+            loadConfig()
+        } catch (e: Exception) {
+            logger.severe("Failed to parse config.yml: ${e.message}")
+            return false
+        }
+
+        val token = pluginConfig.discordToken
+        if (token.isBlank() || token == "YOUR_BOT_TOKEN_HERE") {
             logger.severe("Discord bot token is not configured! Please set it in config.yml")
             return false
         }
 
-        val roleGroups = mutableMapOf<String, String>()
-        val roleSection = config.getConfigurationSection("role-groups")
-        if (roleSection != null) {
-            for (key in roleSection.getKeys(false)) {
-                val group = roleSection.getString(key)
-                if (group != null) {
-                    roleGroups[key] = group
-                }
-            }
-        }
+        val roleGroups = pluginConfig.roleGroups
+        val defaultGroup = pluginConfig.defaultGroup
 
-        val defaultGroup = config.getString("default-group", "default") ?: "default"
-
-        val allowedChannels = if (config.getBoolean("channel-restriction.enabled", false)) {
-            config.getStringList("channel-restriction.channels").toSet()
+        val allowedChannels = if (pluginConfig.channelRestriction.enabled) {
+            pluginConfig.channelRestriction.channels.toSet()
         } else {
             emptySet()
         }
 
-        val requiredRoles = if (config.getBoolean("required-roles.enabled", false)) {
-            config.getStringList("required-roles.roles").toSet()
+        val requiredRoles = if (pluginConfig.requiredRoles.enabled) {
+            pluginConfig.requiredRoles.roles.toSet()
         } else {
             emptySet()
         }
 
         val onlineMode = server.onlineMode
-        val forceOnlineUUIDs = config.getBoolean("force-online-uuids", false)
+        val forceOnlineUUIDs = pluginConfig.forceOnlineUuids
 
         logger.info("Loaded ${roleGroups.size} role-to-group mappings")
         if (allowedChannels.isNotEmpty()) logger.info("Channel restriction enabled: ${allowedChannels.size} channel(s)")

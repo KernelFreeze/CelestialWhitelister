@@ -22,12 +22,13 @@ dependencies {
     compileOnly("net.luckperms:api:5.4")
 
     paperLibrary("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    paperLibrary("com.charleskorn.kaml:kaml:0.72.0")
     paperLibrary("dev.kord:kord-core:0.15.0")
     paperLibrary("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.22.0")
     paperLibrary("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.22.0")
 }
 
-val generatePaperLibraries = tasks.register("generatePaperLibraries") {
+val generatePaperLibraries: TaskProvider<Task> = tasks.register("generatePaperLibraries") {
     val outputFile = layout.buildDirectory.file("generated-resources/paper-libraries.txt")
     inputs.files(paperLibrary)
     outputs.file(outputFile)
