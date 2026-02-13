@@ -29,6 +29,8 @@ dependencies {
     paperLibrary("org.jetbrains.exposed:exposed-core:0.57.0")
     paperLibrary("org.jetbrains.exposed:exposed-jdbc:0.57.0")
     paperLibrary("org.xerial:sqlite-jdbc:3.47.1.0")
+    paperLibrary("net.xyzsd.fluent:fluent-base:0.72")
+    paperLibrary("net.xyzsd.fluent:fluent-functions-icu:0.72")
 }
 
 val generatePaperLibraries: TaskProvider<Task> = tasks.register("generatePaperLibraries") {

@@ -16,6 +16,8 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.util.UUID
 
+data class WhitelistResult(val success: Boolean, val messageKey: String, val args: Map<String, Any> = emptyMap())
+
 class DiscordBot(
     private val plugin: JavaPlugin,
     private val token: String,
@@ -27,6 +29,7 @@ class DiscordBot(
     private val forceOnlineUUIDs: Boolean,
     private val oneTimeWhitelist: Boolean,
     private val database: WhitelistDatabase?,
+    private val messages: Messages,
 ) {
     private var kord: Kord? = null
 
@@ -73,7 +76,7 @@ class DiscordBot(
             val channelId = interaction.channelId.toString()
             if (channelId !in allowedChannels) {
                 interaction.respondEphemeral {
-                    content = "The /whitelist command cannot be used in this channel."
+                    content = messages.get("whitelist-wrong-channel")
                 }
                 return
             }
@@ -81,7 +84,7 @@ class DiscordBot(
 
         val member = interaction.data.member.value
         if (member == null) {
-            interaction.respondEphemeral { content = "This command can only be used in a server." }
+            interaction.respondEphemeral { content = messages.get("command-guild-only") }
             return
         }
 
@@ -92,7 +95,7 @@ class DiscordBot(
             val existing = database.getEntry(discordId)
             if (existing != null) {
                 interaction.respondEphemeral {
-                    content = "You have already whitelisted **${existing.minecraftNickname}**. Use /changenick to change your nickname."
+                    content = messages.get("already-whitelisted", "nickname" to existing.minecraftNickname)
                 }
                 return
             }
@@ -104,7 +107,7 @@ class DiscordBot(
         if (requiredRoles.isNotEmpty()) {
             if (memberRoleIds.none { it in requiredRoles }) {
                 interaction.respondEphemeral {
-                    content = "You don't have the required role to use this command."
+                    content = messages.get("missing-required-role")
                 }
                 return
             }
@@ -117,7 +120,7 @@ class DiscordBot(
 
         if (matchedGroup == null) {
             interaction.respondEphemeral {
-                content = "You don't have a Discord role that permits whitelisting."
+                content = messages.get("no-whitelisting-role")
             }
             return
         }
@@ -127,15 +130,17 @@ class DiscordBot(
             whitelistPlayer(nickname, matchedGroup)
         }
 
-        // Record in database if whitelist succeeded (message contains "Whitelisted")
-        if (oneTimeWhitelist && database != null && result.startsWith("Whitelisted")) {
+        // Record in database if whitelist succeeded
+        if (oneTimeWhitelist && database != null && result.success) {
             val uuid = withContext(plugin.minecraftDispatcher) { resolveUUID(nickname) }
             if (uuid != null) {
                 database.insertEntry(discordId, nickname, matchedGroup, uuid)
             }
         }
 
-        interaction.respondEphemeral { content = result }
+        interaction.respondEphemeral {
+            content = messages.get(result.messageKey, *result.args.map { it.key to it.value }.toTypedArray())
+        }
     }
 
     private suspend fun handleChangeNick(event: ChatInputCommandInteractionCreateEvent) {
@@ -148,7 +153,7 @@ class DiscordBot(
             val channelId = interaction.channelId.toString()
             if (channelId !in allowedChannels) {
                 interaction.respondEphemeral {
-                    content = "The /changenick command cannot be used in this channel."
+                    content = messages.get("changenick-wrong-channel")
                 }
                 return
             }
@@ -156,7 +161,7 @@ class DiscordBot(
 
         val member = interaction.data.member.value
         if (member == null) {
-            interaction.respondEphemeral { content = "This command can only be used in a server." }
+            interaction.respondEphemeral { content = messages.get("command-guild-only") }
             return
         }
 
@@ -164,7 +169,7 @@ class DiscordBot(
 
         if (database == null) {
             interaction.respondEphemeral {
-                content = "The nickname change feature is not enabled."
+                content = messages.get("changenick-not-enabled")
             }
             return
         }
@@ -172,14 +177,14 @@ class DiscordBot(
         val existing = database.getEntry(discordId)
         if (existing == null) {
             interaction.respondEphemeral {
-                content = "You haven't whitelisted a player yet. Use /whitelist first."
+                content = messages.get("no-existing-whitelist")
             }
             return
         }
 
         if (existing.minecraftNickname.equals(newNickname, ignoreCase = true)) {
             interaction.respondEphemeral {
-                content = "That's already your whitelisted nickname."
+                content = messages.get("same-nickname")
             }
             return
         }
@@ -190,7 +195,7 @@ class DiscordBot(
         if (requiredRoles.isNotEmpty()) {
             if (memberRoleIds.none { it in requiredRoles }) {
                 interaction.respondEphemeral {
-                    content = "You don't have the required role to use this command."
+                    content = messages.get("missing-required-role")
                 }
                 return
             }
@@ -203,7 +208,7 @@ class DiscordBot(
 
         if (newGroup == null) {
             interaction.respondEphemeral {
-                content = "You don't have a Discord role that permits whitelisting."
+                content = messages.get("no-whitelisting-role")
             }
             return
         }
@@ -212,14 +217,16 @@ class DiscordBot(
             changeWhitelistedPlayer(existing, newNickname, newGroup)
         }
 
-        if (result.startsWith("Changed")) {
+        if (result.success) {
             val newUuid = withContext(plugin.minecraftDispatcher) { resolveUUID(newNickname) }
             if (newUuid != null) {
                 database.updateEntry(discordId, newNickname, newGroup, newUuid)
             }
         }
 
-        interaction.respondEphemeral { content = result }
+        interaction.respondEphemeral {
+            content = messages.get(result.messageKey, *result.args.map { it.key to it.value }.toTypedArray())
+        }
     }
 
     @Serializable
@@ -266,9 +273,10 @@ class DiscordBot(
         }
     }
 
-    private fun whitelistPlayer(nickname: String, groupName: String): String {
+    private fun whitelistPlayer(nickname: String, groupName: String): WhitelistResult {
         val server = plugin.server
-        val uuid = resolveUUID(nickname) ?: return "Could not find Minecraft player **$nickname**."
+        val uuid = resolveUUID(nickname)
+            ?: return WhitelistResult(false, "player-not-found", mapOf("nickname" to nickname))
 
         val offlinePlayer = server.getOfflinePlayer(uuid)
         offlinePlayer.isWhitelisted = true
@@ -282,22 +290,22 @@ class DiscordBot(
 
             if (group == null) {
                 CelestialWhitelister.LOGGER.error { "$groupName does not exist. Can't add the whitelisted user to that group." }
-                "Whitelisted **$nickname**, but LuckPerms group `$groupName` does not exist."
+                WhitelistResult(true, "whitelist-success-group-missing", mapOf("nickname" to nickname, "group" to groupName))
             } else {
                 val node = InheritanceNode.builder(group).build()
                 user.data().add(node)
                 luckPerms.userManager.saveUser(user).join()
 
                 CelestialWhitelister.LOGGER.info { "Added $nickname to group $groupName." }
-                "Whitelisted **$nickname** and added to group `$groupName`."
+                WhitelistResult(true, "whitelist-success", mapOf("nickname" to nickname, "group" to groupName))
             }
         } catch (e: Exception) {
             plugin.logger.warning("Failed to assign LuckPerms group: ${e.message}")
-            "Whitelisted **$nickname**, but failed to assign LuckPerms group: `${e.message}`"
+            WhitelistResult(true, "whitelist-success-group-error", mapOf("nickname" to nickname, "error" to (e.message ?: "unknown")))
         }
     }
 
-    private fun changeWhitelistedPlayer(existing: WhitelistEntry, newNickname: String, newGroup: String): String {
+    private fun changeWhitelistedPlayer(existing: WhitelistEntry, newNickname: String, newGroup: String): WhitelistResult {
         val server = plugin.server
 
         // Remove old player from whitelist and LuckPerms group
@@ -321,7 +329,7 @@ class DiscordBot(
 
         // Add new player
         val newUuid = resolveUUID(newNickname)
-            ?: return "Removed old player from whitelist, but could not find Minecraft player **$newNickname**."
+            ?: return WhitelistResult(false, "changenick-old-not-found", mapOf("nickname" to newNickname))
 
         val newPlayer = server.getOfflinePlayer(newUuid)
         newPlayer.isWhitelisted = true
@@ -335,18 +343,21 @@ class DiscordBot(
 
             if (group == null) {
                 CelestialWhitelister.LOGGER.error { "$newGroup does not exist. Can't add the whitelisted user to that group." }
-                "Changed nickname to $newNickname, but LuckPerms group $newGroup does not exist."
+                WhitelistResult(true, "changenick-success-group-missing", mapOf("nickname" to newNickname, "group" to newGroup))
             } else {
                 val node = InheritanceNode.builder(group).build()
                 user.data().add(node)
                 luckPerms.userManager.saveUser(user).join()
 
                 CelestialWhitelister.LOGGER.info { "Added '$newNickname' to group '$newGroup'." }
-                "Changed whitelisted player from ${existing.minecraftNickname} to $newNickname (group: $newGroup)."
+                WhitelistResult(
+                    true, "changenick-success",
+                    mapOf("oldNickname" to existing.minecraftNickname, "newNickname" to newNickname, "group" to newGroup)
+                )
             }
         } catch (e: Exception) {
             plugin.logger.warning("Failed to assign LuckPerms group: ${e.message}")
-            "Changed nickname to $newNickname, but failed to assign LuckPerms group: ${e.message}"
+            WhitelistResult(true, "changenick-success-group-error", mapOf("nickname" to newNickname, "error" to (e.message ?: "unknown")))
         }
     }
 

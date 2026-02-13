@@ -21,14 +21,28 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
 
     private var discordBot: DiscordBot? = null
     private var whitelistDatabase: WhitelistDatabase? = null
+    private val messages = Messages(dataFolder)
 
     override suspend fun onEnableAsync() {
         saveDefaultConfig()
+        saveDefaultMessages()
+        messages.load()
         registerCommands()
 
         if (!startBot()) {
             server.pluginManager.disablePlugin(this)
             return
+        }
+    }
+
+    private fun saveDefaultMessages() {
+        val messagesDir = dataFolder.resolve("messages")
+        messagesDir.mkdirs()
+        val defaultFile = messagesDir.resolve("en.ftl")
+        if (!defaultFile.exists()) {
+            javaClass.getResourceAsStream("/messages/en.ftl")?.use { input ->
+                defaultFile.outputStream().use { output -> input.copyTo(output) }
+            }
         }
     }
 
@@ -43,7 +57,7 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
                             .executes { ctx ->
                                 val sender = ctx.source.sender
                                 sender.sendMessage(
-                                    Component.text("Reloading CelestialWhitelister...", NamedTextColor.YELLOW)
+                                    Component.text(messages.get("reload-start"), NamedTextColor.YELLOW)
                                 )
                                 this@CelestialWhitelister.launch {
                                     performReload(sender)
@@ -64,14 +78,15 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
         whitelistDatabase?.close()
         whitelistDatabase = null
         reloadConfig()
+        messages.load()
 
         if (startBot()) {
             sender.sendMessage(
-                Component.text("CelestialWhitelister reloaded successfully!", NamedTextColor.GREEN)
+                Component.text(messages.get("reload-success"), NamedTextColor.GREEN)
             )
         } else {
             sender.sendMessage(
-                Component.text("Failed to reload. Check console for errors.", NamedTextColor.RED)
+                Component.text(messages.get("reload-failure"), NamedTextColor.RED)
             )
         }
     }
@@ -133,7 +148,7 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
         if (oneTimeWhitelist) logger.info("One-time whitelist restriction enabled")
         logger.info("Server online-mode: $onlineMode, force-online-uuids: $forceOnlineUUIDs")
 
-        val bot = DiscordBot(this, token, roleGroups, defaultGroup, allowedChannels, requiredRoles, onlineMode, forceOnlineUUIDs, oneTimeWhitelist, database)
+        val bot = DiscordBot(this, token, roleGroups, defaultGroup, allowedChannels, requiredRoles, onlineMode, forceOnlineUUIDs, oneTimeWhitelist, database, messages)
         discordBot = bot
 
         this.launch {
