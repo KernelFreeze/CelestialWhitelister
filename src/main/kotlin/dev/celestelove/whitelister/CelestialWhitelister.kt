@@ -3,6 +3,7 @@ package dev.celestelove.whitelister
 import com.github.shynixn.mccoroutine.bukkit.SuspendingJavaPlugin
 import com.github.shynixn.mccoroutine.bukkit.launch
 import com.mojang.brigadier.Command
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.papermc.paper.command.brigadier.Commands
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +14,9 @@ import org.bukkit.command.CommandSender
 
 @Suppress("UnstableApiUsage")
 class CelestialWhitelister : SuspendingJavaPlugin() {
+    companion object {
+        val LOGGER = KotlinLogging.logger {}
+    }
 
     private var discordBot: DiscordBot? = null
 
@@ -100,11 +104,15 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
             emptySet()
         }
 
+        val onlineMode = server.onlineMode
+        val forceOnlineUUIDs = config.getBoolean("force-online-uuids", false)
+
         logger.info("Loaded ${roleGroups.size} role-to-group mappings")
         if (allowedChannels.isNotEmpty()) logger.info("Channel restriction enabled: ${allowedChannels.size} channel(s)")
         if (requiredRoles.isNotEmpty()) logger.info("Role requirement enabled: ${requiredRoles.size} role(s)")
+        logger.info("Server online-mode: $onlineMode, force-online-uuids: $forceOnlineUUIDs")
 
-        val bot = DiscordBot(this, token, roleGroups, defaultGroup, allowedChannels, requiredRoles)
+        val bot = DiscordBot(this, token, roleGroups, defaultGroup, allowedChannels, requiredRoles, onlineMode, forceOnlineUUIDs)
         discordBot = bot
 
         this.launch {

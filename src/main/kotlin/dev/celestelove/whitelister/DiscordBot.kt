@@ -1,15 +1,22 @@
 package dev.celestelove.whitelister
 
 import com.github.shynixn.mccoroutine.bukkit.minecraftDispatcher
+import com.google.gson.Gson
 import dev.kord.core.Kord
 import dev.kord.core.behavior.interaction.respondEphemeral
 import dev.kord.core.event.interaction.ChatInputCommandInteractionCreateEvent
 import dev.kord.core.on
 import dev.kord.rest.builder.interaction.string
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import net.luckperms.api.LuckPermsProvider
 import net.luckperms.api.node.types.InheritanceNode
 import org.bukkit.plugin.java.JavaPlugin
+import java.net.HttpURLConnection
+import java.net.URI
+import java.util.UUID
 
 class DiscordBot(
     private val plugin: JavaPlugin,
@@ -17,7 +24,9 @@ class DiscordBot(
     private val roleGroups: Map<String, String>,
     private val defaultGroup: String,
     private val allowedChannels: Set<String>,
-    private val requiredRoles: Set<String>
+    private val requiredRoles: Set<String>,
+    private val onlineMode: Boolean,
+    private val forceOnlineUUIDs: Boolean
 ) {
     private var kord: Kord? = null
 
@@ -97,15 +106,58 @@ class DiscordBot(
         interaction.respondEphemeral { content = result }
     }
 
+    @Serializable
+    data class MojangProfile(val id: String, val name: String) {
+        fun uuid(): UUID {
+            val formatted = id.replaceFirst(
+                Regex("(\\w{8})(\\w{4})(\\w{4})(\\w{4})(\\w{12})"),
+                "$1-$2-$3-$4-$5"
+            )
+            return UUID.fromString(formatted)
+        }
+    }
+
+    private val json = Json { ignoreUnknownKeys = true }
+
+    fun getOnlineUUID(name: String): UUID? {
+        val url = URI("https://api.mojang.com/users/profiles/minecraft/$name").toURL()
+        val connection = url.openConnection() as HttpURLConnection
+        connection.requestMethod = "GET"
+
+        if (connection.responseCode != 200) return null
+
+        val body = connection.inputStream.bufferedReader().readText()
+        val profile = json.decodeFromString<MojangProfile>(body)
+        return profile.uuid()
+    }
+
+    fun getOfflineUUID(name: String): UUID? {
+        val server = plugin.server
+
+        val profile = server.createProfile(name)
+        profile.complete(true, false)
+
+        return profile.id
+    }
+
+    private fun resolveUUID(nickname: String): UUID? {
+        return if (onlineMode) {
+            getOnlineUUID(nickname)
+        } else if (forceOnlineUUIDs) {
+            getOnlineUUID(nickname) ?: getOfflineUUID(nickname)
+        } else {
+            getOfflineUUID(nickname)
+        }
+    }
+
     private fun whitelistPlayer(nickname: String, groupName: String): String {
         val server = plugin.server
-        val profile = server.createProfile(nickname)
-        profile.complete(true)
-
-        val uuid = profile.id ?: return "Could not find Minecraft player **$nickname**."
+        val uuid = resolveUUID(nickname) ?: return "Could not find Minecraft player **$nickname**."
 
         val offlinePlayer = server.getOfflinePlayer(uuid)
         offlinePlayer.isWhitelisted = true
+
+        CelestialWhitelister.LOGGER.info { "'$nickname' (UUID: $uuid was whitelisted." }
 
         return try {
             val luckPerms = LuckPermsProvider.get()
@@ -113,16 +165,19 @@ class DiscordBot(
             val group = luckPerms.groupManager.loadGroup(groupName).join().orElse(null)
 
             if (group == null) {
-                "Whitelisted **$nickname**, but LuckPerms group `$groupName` does not exist."
+                CelestialWhitelister.LOGGER.error { "$groupName does not exist. Can't add the whitelisted user to that group." }
+                "Whitelisted $nickname, but LuckPerms group $groupName does not exist."
             } else {
                 val node = InheritanceNode.builder(group).build()
                 user.data().add(node)
                 luckPerms.userManager.saveUser(user).join()
-                "Whitelisted **$nickname** and added to group `$groupName`."
+
+                CelestialWhitelister.LOGGER.info { "Added **$nickname** to group `$groupName`." }
+                "Whitelisted $nickname and added to group $groupName."
             }
         } catch (e: Exception) {
             plugin.logger.warning("Failed to assign LuckPerms group: ${e.message}")
-            "Whitelisted **$nickname**, but failed to assign LuckPerms group: ${e.message}"
+            "Whitelisted $nickname, but failed to assign LuckPerms group: ${e.message}"
         }
     }
 
