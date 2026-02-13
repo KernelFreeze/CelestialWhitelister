@@ -26,6 +26,9 @@ dependencies {
     paperLibrary("dev.kord:kord-core:0.15.0")
     paperLibrary("com.github.shynixn.mccoroutine:mccoroutine-bukkit-api:2.22.0")
     paperLibrary("com.github.shynixn.mccoroutine:mccoroutine-bukkit-core:2.22.0")
+    paperLibrary("org.jetbrains.exposed:exposed-core:0.57.0")
+    paperLibrary("org.jetbrains.exposed:exposed-jdbc:0.57.0")
+    paperLibrary("org.xerial:sqlite-jdbc:3.47.1.0")
 }
 
 val generatePaperLibraries: TaskProvider<Task> = tasks.register("generatePaperLibraries") {

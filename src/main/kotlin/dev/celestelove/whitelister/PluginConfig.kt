@@ -11,6 +11,7 @@ data class PluginConfig(
     @SerialName("force-online-uuids") val forceOnlineUuids: Boolean = false,
     @SerialName("channel-restriction") val channelRestriction: ChannelRestriction = ChannelRestriction(),
     @SerialName("required-roles") val requiredRoles: RequiredRoles = RequiredRoles(),
+    @SerialName("one-time-whitelist") val oneTimeWhitelist: Boolean = false,
 )
 
 @Serializable

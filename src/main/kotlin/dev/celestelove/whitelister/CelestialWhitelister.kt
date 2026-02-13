@@ -20,6 +20,7 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
     }
 
     private var discordBot: DiscordBot? = null
+    private var whitelistDatabase: WhitelistDatabase? = null
 
     override suspend fun onEnableAsync() {
         saveDefaultConfig()
@@ -60,6 +61,8 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
     private suspend fun performReload(sender: CommandSender) {
         discordBot?.stop()
         discordBot = null
+        whitelistDatabase?.close()
+        whitelistDatabase = null
         reloadConfig()
 
         if (startBot()) {
@@ -109,13 +112,28 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
 
         val onlineMode = server.onlineMode
         val forceOnlineUUIDs = pluginConfig.forceOnlineUuids
+        val oneTimeWhitelist = pluginConfig.oneTimeWhitelist
+
+        val database = if (oneTimeWhitelist) {
+            try {
+                WhitelistDatabase(dataFolder).also {
+                    whitelistDatabase = it
+                }
+            } catch (e: Exception) {
+                logger.severe("Failed to initialize whitelist database: ${e.message}")
+                return false
+            }
+        } else {
+            null
+        }
 
         logger.info("Loaded ${roleGroups.size} role-to-group mappings")
         if (allowedChannels.isNotEmpty()) logger.info("Channel restriction enabled: ${allowedChannels.size} channel(s)")
         if (requiredRoles.isNotEmpty()) logger.info("Role requirement enabled: ${requiredRoles.size} role(s)")
+        if (oneTimeWhitelist) logger.info("One-time whitelist restriction enabled")
         logger.info("Server online-mode: $onlineMode, force-online-uuids: $forceOnlineUUIDs")
 
-        val bot = DiscordBot(this, token, roleGroups, defaultGroup, allowedChannels, requiredRoles, onlineMode, forceOnlineUUIDs)
+        val bot = DiscordBot(this, token, roleGroups, defaultGroup, allowedChannels, requiredRoles, onlineMode, forceOnlineUUIDs, oneTimeWhitelist, database)
         discordBot = bot
 
         this.launch {
@@ -134,6 +152,7 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
 
     override suspend fun onDisableAsync() {
         discordBot?.stop()
+        whitelistDatabase?.close()
         logger.info("CelestialWhitelister disabled")
     }
 }

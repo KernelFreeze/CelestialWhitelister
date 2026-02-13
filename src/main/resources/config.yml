@@ -35,3 +35,8 @@ required-roles:
   roles:
     - "333333333333333333"
     - "444444444444444444"
+
+# One-time whitelist restriction. When enabled, each Discord user can only
+# use /whitelist once. Their entry is stored in a local SQLite database.
+# Users can change their whitelisted nickname using /changenick instead.
+one-time-whitelist: true
