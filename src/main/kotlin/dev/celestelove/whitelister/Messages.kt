@@ -10,16 +10,16 @@ import java.util.Locale
 class Messages(private val dataFolder: File) {
     private lateinit var bundle: FluentBundle
 
-    fun load() {
+    fun load(language: String) {
         val messagesDir = dataFolder.resolve("messages")
-        val builder = FluentBundle.builder(Locale.US, ICUFunctionFactory.INSTANCE)
+        val locale = Locale.forLanguageTag(language)
+        val builder = FluentBundle.builder(locale, ICUFunctionFactory.INSTANCE)
 
-        messagesDir.listFiles { f -> f.extension == "ftl" }
-            ?.sorted()
-            ?.forEach { file ->
-                val resource = FTLParser.parse(FTLStream.of(file.readText()))
-                builder.addResourceOverriding(resource)
-            }
+        val file = messagesDir.resolve("$language.ftl")
+        if (file.exists()) {
+            val resource = FTLParser.parse(FTLStream.of(file.readText()))
+            builder.addResourceOverriding(resource)
+        }
 
         bundle = builder.build()
     }

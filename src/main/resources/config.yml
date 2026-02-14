@@ -1,6 +1,10 @@
 # Discord bot token
 discord-token: "YOUR_BOT_TOKEN_HERE"
 
+# Language for plugin messages. Must match the name of a .ftl file
+# in the messages folder (e.g. "en" for en.ftl, "es" for es.ftl).
+language: "en"
+
 # Mapping of Discord role IDs to LuckPerms group names.
 # Players will be added to the LuckPerms group corresponding to
 # the highest role they have from this list.

@@ -26,7 +26,6 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
     override suspend fun onEnableAsync() {
         saveDefaultConfig()
         saveDefaultMessages()
-        messages.load()
         registerCommands()
 
         if (!startBot()) {
@@ -38,10 +37,12 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
     private fun saveDefaultMessages() {
         val messagesDir = dataFolder.resolve("messages")
         messagesDir.mkdirs()
-        val defaultFile = messagesDir.resolve("en.ftl")
-        if (!defaultFile.exists()) {
-            javaClass.getResourceAsStream("/messages/en.ftl")?.use { input ->
-                defaultFile.outputStream().use { output -> input.copyTo(output) }
+        for (lang in listOf("en", "es")) {
+            val file = messagesDir.resolve("$lang.ftl")
+            if (!file.exists()) {
+                javaClass.getResourceAsStream("/messages/$lang.ftl")?.use { input ->
+                    file.outputStream().use { output -> input.copyTo(output) }
+                }
             }
         }
     }
@@ -78,7 +79,6 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
         whitelistDatabase?.close()
         whitelistDatabase = null
         reloadConfig()
-        messages.load()
 
         if (startBot()) {
             sender.sendMessage(
@@ -103,6 +103,8 @@ class CelestialWhitelister : SuspendingJavaPlugin() {
             logger.severe("Failed to parse config.yml: ${e.message}")
             return false
         }
+
+        messages.load(pluginConfig.language)
 
         val token = pluginConfig.discordToken
         if (token.isBlank() || token == "YOUR_BOT_TOKEN_HERE") {

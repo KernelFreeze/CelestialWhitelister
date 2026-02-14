@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PluginConfig(
     @SerialName("discord-token") val discordToken: String = "YOUR_BOT_TOKEN_HERE",
+    val language: String = "en",
     @SerialName("role-groups") val roleGroups: Map<String, String> = emptyMap(),
     @SerialName("default-group") val defaultGroup: String = "default",
     @SerialName("force-online-uuids") val forceOnlineUuids: Boolean = false,
