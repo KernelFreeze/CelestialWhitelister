@@ -33,6 +33,10 @@ The config file is located at `plugins/CelestialWhitelister/config.yml`.
 # Discord bot token
 discord-token: "YOUR_BOT_TOKEN_HERE"
 
+# Language for plugin messages. Must match the name of a .ftl file
+# in the messages folder (e.g. "en" for en.ftl, "es" for es.ftl).
+language: "en"
+
 # Mapping of Discord role IDs to LuckPerms group names.
 # Players will be added to the LuckPerms group corresponding to
 # the highest role they have from this list.
@@ -67,6 +71,11 @@ required-roles:
   roles:
     - "333333333333333333"
     - "444444444444444444"
+
+# One-time whitelist restriction. When enabled, each Discord user can only
+# use /whitelist once. Their entry is stored in a local SQLite database.
+# Users can change their whitelisted nickname using /changenick instead.
+one-time-whitelist: true
 
 ```
 
@@ -105,6 +114,7 @@ All `.ftl` files in the messages directory are automatically loaded and processe
 | Option | Description                                                                                                                      |
 |---|----------------------------------------------------------------------------------------------------------------------------------|
 | `discord-token` | The bot token from the Discord Developer Portal.                                                                                 |
+| `language` | The language for plugin messages. Must match a `.ftl` file in the messages folder (e.g., `"en"` for `en.ftl`).                   |
 | `role-groups` | A map of Discord role ID to LuckPerms group name. The first role the member has that appears in this map determines their group. |
 | `default-group` | The LuckPerms group assigned when no role matches. Set to `""` to reject users with no matching role instead.                    |
 | `force-online-uuids` | When enabled on an **offline mode** server, the plugin will try to resolve the player's online (Mojang) UUID first,              |
@@ -112,6 +122,7 @@ All `.ftl` files in the messages directory are automatically loaded and processe
 | `channel-restriction.channels` | List of Discord channel IDs where the command is allowed.                                                                        |
 | `required-roles.enabled` | When `true`, members must have at least one of the listed roles to use the command.                                              |
 | `required-roles.roles` | List of Discord role IDs required to use `/whitelist`.                                                                           |
+| `one-time-whitelist` | When `true`, each Discord user can only whitelist once. Use `/changenick` to change the whitelisted nickname.                    |
 
 ## Commands
 
@@ -126,6 +137,7 @@ All `.ftl` files in the messages directory are automatically loaded and processe
 | Command | Description |
 |---|---|
 | `/whitelist <nickname>` | Whitelist a Minecraft player and assign their LuckPerms group. |
+| `/changenick <nickname>` | Change your whitelisted nickname (only available when `one-time-whitelist` is enabled). |
 
 ## Permissions
 
