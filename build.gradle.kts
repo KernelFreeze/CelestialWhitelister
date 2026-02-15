@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "dev.celestelove"
-version = "1.0-SNAPSHOT"
+version = "1.0.0"
 
 val paperLibrary by configurations.creating
 configurations.compileOnly.get().extendsFrom(paperLibrary)
