@@ -70,6 +70,36 @@ required-roles:
 
 ```
 
+## Localization
+
+CelestialWhitelister supports multiple languages using [Project Fluent](https://projectfluent.org/), a localization framework designed for natural, fluent translations.
+
+### Supported Languages
+
+Currently supported languages:
+- **English** (en)
+- **Spanish** (es)
+
+The plugin automatically selects the appropriate language file based on the `.ftl` files present in the `messages/` directory.
+
+### Translation Files
+
+Translation files are stored at `plugins/CelestialWhitelister/messages/` in [Project Fluent](https://projectfluent.org/fluent.html) format (`.ftl`).
+
+Each language has its own file:
+- `en.ftl` - English messages
+- `es.ftl` - Spanish messages
+
+### Adding a New Language
+
+To add a new language:
+
+1. Create a new `.ftl` file in `plugins/CelestialWhitelister/messages/` using the language code as the filename (e.g., `fr.ftl` for French).
+2. Translate all message keys from the English `en.ftl` file.
+3. Reload the plugin with `/celestialwhitelister reload`.
+
+All `.ftl` files in the messages directory are automatically loaded and processed in alphabetical order.
+
 ### Options
 
 | Option | Description                                                                                                                      |
